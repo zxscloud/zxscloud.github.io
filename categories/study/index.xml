@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+  <channel>
+    <title>study on 晓时</title>
+    <link>https://zxscloud.github.io/categories/study/</link>
+    <description>Recent content in study on 晓时</description>
+    <generator>Hugo -- gohugo.io</generator>
+    <language>en-us</language>
+    <lastBuildDate>Fri, 24 Jun 2022 11:25:52 +0800</lastBuildDate><atom:link href="https://zxscloud.github.io/categories/study/index.xml" rel="self" type="application/rss+xml" />
+    <item>
+      <title>Stata Frames</title>
+      <link>https://zxscloud.github.io/posts/stataframes/</link>
+      <pubDate>Fri, 24 Jun 2022 11:25:52 +0800</pubDate>
+      
+      <guid>https://zxscloud.github.io/posts/stataframes/</guid>
+      <description>来源：https://medium.com/the-stata-guide/the-stata-frames-guide-1149b5086</description>
+    </item>
+    
+  </channel>
+</rss>

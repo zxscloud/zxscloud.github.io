@@ -1,0 +1,426 @@
+<!DOCTYPE html>
+<html lang="en-us">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    
+    <title>Stata Frames - 晓时</title>
+    <meta property="og:title" content="Stata Frames - 晓时">
+    
+    <meta name="twitter:card" content="summary">
+
+    
+      
+    
+
+    
+      
+      <meta property="description" content="来源：https://medium.com/the-stata-guide/the-stata-frames-guide-1149b50864e3 
+[&amp;hellip;] The ability to use frames in Stata is arguably one of the most important features added to the software. &amp;hellip;">
+      <meta property="og:description" content="来源：https://medium.com/the-stata-guide/the-stata-frames-guide-1149b50864e3 
+[&amp;hellip;] The ability to use frames in Stata is arguably one of the most important features added to the software. &amp;hellip;">
+      
+    
+
+    
+    
+    <meta name="twitter:image" content="https://miro.medium.com/max/1154/1*swi0b_IDGEaLDVT29lnpGA.png">
+    
+    
+
+    
+
+    
+    
+
+
+<link href='//cdnjs.cloudflare.com/ajax/libs/highlight.js/9.12.0/styles/github.min.css' rel='stylesheet' type='text/css' />
+
+
+
+    <link rel="stylesheet" href="/css/style.css" />
+    <link rel="stylesheet" href="/css/fonts.css" />
+    
+  </head>
+
+  
+  <body class="posts">
+    <header class="masthead">
+      <h1><a href="/">晓时</a></h1>
+
+<p class="tagline">一切向新</p>
+
+      <nav class="menu">
+  <input id="menu-check" type="checkbox" hidden/>
+  <label id="menu-label" for="menu-check" class="unselectable" hidden>
+    <span class="icon close-icon">✕</span>
+    <span class="icon open-icon">☰</span>
+    <span class="text">Menu</span>
+  </label>
+  <ul>
+  
+  
+  <li><a href="/">Home</a></li>
+  
+  <li><a href="/about/">About</a></li>
+  
+  <li><a href="/categories/">Categories</a></li>
+  
+  <li><a href="/tags/">Tags</a></li>
+  
+  <li><a href="/index.xml">Subscribe</a></li>
+  
+  
+  </ul>
+</nav>
+
+    </header>
+
+    <article class="main">
+      <header class="title">
+      
+<h1>Stata Frames</h1>
+
+<h3>zxs
+  /  2022-06-24</h3>
+<hr>
+
+
+      </header>
+
+
+
+
+
+<p>来源：<font color =red ><a href="https://medium.com/the-stata-guide/the-stata-frames-guide-1149b50864e3">https://medium.com/the-stata-guide/the-stata-frames-guide-1149b50864e3</a> </font></p>
+<hr>
+<p>The ability to use frames in Stata is arguably one of the most important features added to the software. Introduced in version 16, frames essentially allow us to hold multiple datasets in memory, and work across them. This has considerable advantages over using single, very large datasets, or moving in and out of datasets using the preserve and restore options. For example, assume we have data on students (100k observations), teachers (10k obs), and schools (1k obs). If we merge all this data together (a one-to-many merge), then we will end up multiplying the observations in the teachers dataset by 10, and the schools by a 100. This also implies that each variable in the teachers and schools dataset is repeated for each corresponding student row. This creates an unnecessarily large dataset, which is a burden on the memory that can considerably slow down calculations. Frames allows us to keep the datasets in their original form, and we can create “links” between them either as a 1:1 or a m:1 merge (1:m is not currently supported). For very large datasets, we are talking about immense memory savings and efficiency gains.</p>
+<p>The frames feature is not unique to Stata. It has long existed in other languages including <a href="https://www.tutorialspoint.com/r/r_data_frames.htm">R</a> and <a href="https://sqlframes.com/docs/sql_frames/intro/">SQL</a>. But being a relatively new feature in Stata, few use it or understand its importance. In short, frames are really worth the investment, and this guide will cover the basics.</p>
+<p>Just like other guides, it is assumed that you have access to at least Stata 16, and understand basic Stata syntax and can work your way around code snippets. This guide is more of an introduction to Stata frames. Always check the help files for full documentation. Several useful links are provided at the end of the guide for additional reading. Stata accepts <code>frames</code> and <code>frame</code> as interchangeable commands, so I also use them liberally below.</p>
+<p>First of all, any data loaded in Stata 16 or higher, is loaded in a frame:</p>
+<pre><code>sysuse auto, clear
+</code></pre>
+<p>The default frame is called exactly that, “default”. We can check it by typing:</p>
+<pre><code>frames
+</code></pre>
+<p>We can, of course, rename the frame:</p>
+<pre><code>frames rename default core
+</code></pre>
+<p>which follows the standard logic <code>frames rename &lt;oldname&gt; &lt;newname&gt;</code>. You can check again by typing:</p>
+<pre><code>frames
+</code></pre>
+<p>This will tell you which frame you are currently working in and what it’s called.</p>
+<p>If we need to manipulate some variables (or destroy raw data), especially if their core structure changes, we can push the variables that we want to experiment with into a new frame:</p>
+<pre><code>frames put make price mpg, into(mysubset)
+</code></pre>
+<p>Here we copy three variables: <em>make</em>, <em>price</em>, and <em>mpg</em> in a frame titled “mysubset”.</p>
+<p>At this point, we have two frames, the “core” which contains all the data, and “mysubset”. We can check what all frames exist by typing:</p>
+<pre><code>frames dir
+</code></pre>
+<p>and we will get this output:</p>
+<p><img src="https://miro.medium.com/max/1154/1*swi0b_IDGEaLDVT29lnpGA.png" alt=""></p>
+<p>Here it shows that we have two frames, their dimensions in rows x columns, or observations x variables, and their label. The <code>*</code> implies unsaved data frames.</p>
+<p>Since we are currently in the “core” frame, we can change the frame as follows:</p>
+<pre><code>frame change mysubset
+</code></pre>
+<p>Here we switch to the other frame and we will see the three variables that we have copied. Switching is not really necessary. We can call other frames which staying in the “core” frame. Let’s try it out. First let’s switch back to the core frame:</p>
+<pre><code>frames change core
+</code></pre>
+<p>and let’s summarize the variables in “mysubset”. For an overall summary, the following command gives a broad overview:</p>
+<pre><code>frames mysubset: describe
+frames mysubset: summarize
+</code></pre>
+<p>These are just the standard describe and summarize commands for a specific frame. We can operate on variables in another frame as follows:</p>
+<pre><code>frame mysubset: summ price
+</code></pre>
+<p>which is a line-by-line option. Otherwise, can also use code blocks:</p>
+<pre><code>frame mysubset {  foreach x of varlist _all {
+  summ `x'
+ }
+}
+</code></pre>
+<p>This simple example shows how operations can be performed using the frames block:</p>
+<pre><code>frame &lt;framename&gt; {
+   some stata commands
+}
+</code></pre>
+<p>This makes doing a bunch of calculations much easier. The logic is similar to calling Mata if you are already familiar with its programming structure. If not, an introduction to Mata is provided in <a href="https://medium.com/the-stata-guide/mata-statas-end-game-5983c0ee11bd">this guide</a>.</p>
+<p>In terms of applications, frames are not just useful for data subsets. We can also copy the original data as it is:</p>
+<pre><code>frames copy core mycopy, replace
+</code></pre>
+<p>where we generate a frame titled “mycopy” with the original data replicated. The <code>replace</code> option is optional but it overwrites the frame if it already exists. So use it carefully!</p>
+<p>We can also generate an empty data frame:</p>
+<pre><code>frames create otherdata    // create an empty frame
+</code></pre>
+<p>and load some other data set inside:</p>
+<pre><code>frames otherdata: sysuse census
+</code></pre>
+<p>If you have tried all the above commands, we should have four frames now:</p>
+<pre><code>frames dir
+</code></pre>
+<p><img src="https://miro.medium.com/max/1160/1*Cpj-1j9PQU-Yto3jhokWmw.png" alt=""></p>
+<p>And we get a neat summary of all the frame types:</p>
+<p>The “core” frame, a copy of the main data set saved in “mycopy”, our subset of three variables stored in “mysubset”, and the other dataset that we loaded in “otherdata”.</p>
+<p>We can also clean up and drop frames. For example:</p>
+<pre><code>clear frames
+</code></pre>
+<p>or</p>
+<pre><code>frames reset
+</code></pre>
+<p>will just clear everything and revert to a single “default” frame. If you are using frames a lot, it is also advisable to add <code>clear frames</code> to your dofiles together with other initialization options:</p>
+<pre><code>clear
+clear frames
+clear matacd &quot;&lt;my directory&gt;&quot;
+etc.
+</code></pre>
+<p>We can also drop individual frames by typing:</p>
+<pre><code>frames drop mycopy
+</code></pre>
+<p>which will drop the “mycopy” frame from memory. Just like working with matrices and Mata, it is very easy to create data “junk”. So make sure to drop stuff or clean it up where necessary. While the gains might be very marginal on small (&lt;10,000 observations), one can feel the difference with very large data sets.</p>
+<p>We can also generate a data frame which we can use for storing some information. For example, summary statistics that we can later use for graphs, tables etc.</p>
+<p>Let’s start with a simple example, where we want to take the “core” data, summarize each variable, and store its mean and standard deviation in another data frame. We also want to automate the process and select only the numerical variables. Let’s start with a clean slate:</p>
+<pre><code>clear
+clear framessysuse auto
+</code></pre>
+<p>Let’s create an empty frame with the variable names and format type:</p>
+<pre><code>cap frame drop substatsframes create sumstats str15(variable) mean sd
+</code></pre>
+<p>Here we are create three variables in the “sumstats” frame. A string variable called “variable”, and two numeric variables “mean” and “sd”. Note if you want more precision you can also type:</p>
+<pre><code>frames create sumstats str15(variable) double(mean sd)
+</code></pre>
+<p>where we also define the numeric variable types to be double.</p>
+<p>If you now type:</p>
+<pre><code>frames dir
+</code></pre>
+<p>you should get the following output:</p>
+<p><img src="https://miro.medium.com/max/1150/1*WcfjiTDSJ6_sonrVtq21Eg.png" alt=""></p>
+<p>We have an empty “substats” frame with three columns or variables. Now let’s pick all the numerical variables, summarize them, and store the information in the “sumstats” frame:</p>
+<pre><code>// pick variables which are numeric 
+
+ds, has(type numeric)
+local mylist `r(varlist)'
+
+// loop and store information
+foreach x of local mylist { 
+  qui summ `x'
+  frame post sumstats (&quot;`x'&quot;) (r(mean)) (r(sd))}
+</code></pre>
+<p>Note the use of <code>frame post</code>. It has to take the following format when posting:</p>
+<pre><code>frame post &lt;framename&gt; (var1) (var2) (var3)
+</code></pre>
+<p>This format can be used to post any bunch of statistics. Since we start with zero observations, each <code>frames post</code> essentially adds an observation row.</p>
+<p>We can view the dataset we have in the new frame:</p>
+<pre><code>frames change sumstats
+</code></pre>
+<p>and then <code>br</code> and we get a nice table of the numeric variable name and its mean and standard deviation:</p>
+<p><img src="https://miro.medium.com/max/1142/1*A1QXrjgduVIaNlP1I-OwIw.png" alt=""></p>
+<p>Here, I would like to point out that there are two risks one should be aware off when using the <code>frames post</code> command. First, as far as I know, this type of frame posting is restricted to the number of variables you have. You can post less or equal but not more than the variables you have defined. So the variables have to be defined carefully and in the right order when creating a frame. Stata will not know that the mean should go in the mean column automatically. This might take some iterations to figure out exactly what you need, and in which format. Second, <code>frames post</code> is an append command, so if you rerun the loop, you are essentially adding duplicate observations and no errors will be returned. That is why in a program or in a dofile, it makes sense to drop the frame, define the variables, and run the loop in one go so you ultimately end up with the correct data in the frame.</p>
+<p>This usage of frames also has considerable advantage when dealing with regressions or estimation commands. While Stata’s built-in regressions are fairly standardized in the type of information that is stored, either in e-class or r-class locals, it is not the case for user-written commands which can vary considerably. But what is definitely possible is to somehow recover the estimates (depending on how well the command is coded), mostly beta coefficients, standard errors, and/or confidence intervals, after running some estimation, and post them in a frame. Let’s say this frame is called “results”, which contains beta coefficients and standard errors. This keeps the content of the “results” frame neat and clean, irrespective of how the estimated were generated and recovered. Additionally, for plotting or generating tables from results, we can switch to the “results” frame, rather than saving and switching to some data file that contains the results information we need.</p>
+<p>Let’s try a basic regression example where we want to store results of different regressions. Let’s use a default Stata panel data (from the <code>xt</code> manual):</p>
+<pre><code>clear
+clear frames
+webuse nlswork
+xtset idcode yeargen  age2 = age^2
+gen black = (race==2)
+
+Let’s say our core specification is the following:
+
+xtreg ln_w grade age age2 tenure black south
+</code></pre>
+<p>and we want to run different models that deal with fixed effects, random effects, MLE, etc. We can create an empty “results” frame that contains variables that we want to extract, for example, model type (string), variable name (string), its coefficient (numeric) and standard error (numeric):</p>
+<pre><code>cap frame drop results
+frame create results str15(model variable) mean se
+</code></pre>
+<p>From the previous example, we know that anything we “put” in the frames has to be a line-by-line operator. Matrices or a bunch of variables cannot be passed on to frames in a single instance (maybe this might change in the future). So we need to loop over all the variables. We can start off by storing all the variables in a local:</p>
+<pre><code>local varlist &quot;grade age age2 tenure black south&quot;
+</code></pre>
+<p>and run the regression and pass the results to the “results” frame:</p>
+<pre><code class="language-stata">local varlist &quot;grade age age2 tenure black south&quot;
+xtreg ln_w `varlist', re
+foreach x in `varlist' _cons {
+   frame post results (&quot;re&quot;) (&quot;`x'&quot;) (_b[`x']) (_se[`x'])
+}
+</code></pre>
+<p>Since we are using a local, the whole code block needs to run in one go. The <code>foreach</code> loops over the intercept and the variables, and the <code>frame post</code> option, which requires four inputs, adds the information in the “results” frame. The first two inputs are strings, while the last two are beta and standard error estimates recovered from Stata locals.</p>
+<p>We can add the remaining two models as well:</p>
+<pre><code class="language-stata">local varlist &quot;grade age age2 tenure black south&quot;
+
+// Fixed-effects model
+xtreg ln_w `varlist', fe 
+foreach x in `varlist' _cons {
+   frame post results (&quot;fe&quot;) (&quot;`x'&quot;) (_b[`x']) (_se[`x'])
+}
+
+// Random-effects model using MLE
+xtreg ln_w `varlist', mle 
+foreach x in `varlist' _cons {
+   frame post results (&quot;mle&quot;) (&quot;`x'&quot;) (_b[`x']) (_se[`x'])
+}
+</code></pre>
+<p>The above commands should push the results in the “results” frame. We can now explore the frame as well:</p>
+<pre><code>frame change results
+</code></pre>
+<p>and then type <code>br</code> and to see this neat summary table like this:</p>
+<p><img src="https://miro.medium.com/max/1400/1*dbbI_YBlvI9AFvdIKduYWQ.png" alt=""></p>
+<p>It also works with <code>reghdfe</code> (<code>ssc install reghdfe, replace</code>) which is used as a wrapper for several estimation commands:</p>
+<pre><code class="language-stata">frame change default
+local varlist &quot;grade age age2 tenure black south&quot;
+reghdfe ln_w `varlist', absorb(idcode year)
+foreach x in `varlist' _cons {
+   frame post results (&quot;reghdfe&quot;) (&quot;`x'&quot;) (_b[`x']) (_se[`x'])
+}
+</code></pre>
+<p>So above we learned how to push results for various estimates into frames using a bunch of loops. Not very efficient but a lot of possibilities exists to do interesting things with this setup.</p>
+<p>Some additional points:</p>
+<ol>
+<li>Passing all the coefficients to frames is not necessary. If there is just one coefficient of interest, for example, some ATT value we want to track, then the above process is far easier since we just need to push one variable to the data frame for each regression type.</li>
+<li>If we want additional information from <code>r(table)</code> or other e-return variables, we can manually push them to Stata by using the correct indices:</li>
+</ol>
+<pre><code>xtreg ln_w grade age age2 tenure black south, re
+
+// see the r(table) output
+
+mat li r(table)// indices for the first independent variable
+di r(table)[1,1]   // mean
+di r(table)[2,1]   // sd
+di r(table)[5,1]   // (lower CI)
+di r(table)[6,1]   // (upper CI)
+
+// generate an empty frame with the info we need
+
+cap frame drop indextest
+frame create indextest str20(variable) mean sd ll ul
+
+local varlist &quot;grade age age2 tenure black south&quot;
+xtreg ln_w `varlist', re
+
+local i = 1
+foreach x in `varlist' _cons {frame post indextest (&quot;`x'&quot;) (r(table)[1,`i']) (r(table)[2,`i']) (r(table)[5,`i']) (r(table)[6,`i'])   
+local i = `i' + 1  // increment the counter
+}
+frame change indextest
+</code></pre>
+<p>Here we essentially run a counter which pick the variables from the r(table). This can be made more elegant but it all depends on what we want to recover.</p>
+<p>3. Results can also be pushed onto different frames. This allows us to simply convert the <code>r(table)</code> matrix to a dataset and store all the information. This might be easier in some cases:</p>
+<pre><code class="language-stata">// check the frames
+cap frame change default
+cap frame drop allcoeffs
+
+// just create an empty frame
+frame create allcoeffs
+
+// run the regression
+xtreg ln_w grade age age2 tenure black south, fe
+
+// store the r(table) and transpose it
+mat mymat = r(table)'
+mat li mymat  // just for viewing
+
+// dump the matrix in the frame using svmat2 (allows row names)
+frame allcoeffs: svmat2 mymat, names(col) rnames(variables) 
+
+// check what it looks like 
+frame change allcoeffs
+</code></pre>
+<p>The above examples are just provided to give some examples of the usage of frames when dealing with data and results. In summary, without frames, we would have to store the results somewhere (either in a matrix, or in a temporary data file), load them and replace the original data and work on some regression or table output. By pushing the results on to different frames, we can parallel process the two without modifying the datasets over and over again. Note that here we make use of <code>svmat2</code>, a command by the prolific Nick Cox (<code>ssc install svmat2, replace</code>) which also stores row names.</p>
+<p>So how about linking frames? This is undoubtedly, one of the most important features of frames. As mentioned in the introduction, frame links allow us to combine different level of datasets without having to merge everything in one big file. Here I will show some simple example using 1:1 links. But the logic can be extended to work with a m:1 merge. Since 1:m merge is not currently supported, here it is also advisable to start with the finest grain dataset as the default frame.</p>
+<p>Let’s start with a simple dataset:</p>
+<pre><code class="language-stata">clear frames
+sysuse auto, clear
+</code></pre>
+<p>Let’s generate a unique id variable:</p>
+<pre><code class="language-stata">gen id = _n
+order id
+</code></pre>
+<p>What we will do now is copy the <code>id</code> variable in a new data frame called “otherdata”:</p>
+<pre><code>frame put id, into(otherdata)
+</code></pre>
+<p>We can generate some random variables in the new frame:</p>
+<pre><code>frame otherdata: gen var1 = rnormal()
+frame otherdata: gen var2 = runiform()
+</code></pre>
+<p>which are a random normal and uniform distributions. We want to link out main “default” frame with “otherdata”. This is defined through a merge-like option:</p>
+<pre><code>frlink 1:1 id, frame(otherdata)
+</code></pre>
+<p>Since we know it is a 1:1 match, all the observations will be linked. This can of course be replaced with m:1 merge. Additionally the merge can be defined on several variables as well. We should get an output that looks like this:</p>
+<p><img src="https://miro.medium.com/max/1250/1*-wwRc0750qkZCrrGbjZ94A.png" alt=""></p>
+<p>Here we will also get a new variable that is called “otherdata”. This is actually the variable that defines the link (and Stata should label it with some indicator). As a note of precaution, do not touch this variable! The only things allowed are renaming it or labeling it.</p>
+<p>In case you modify or change datasets in frames, then it is safe to rebuild the link:</p>
+<pre><code>frlink rebuild id
+</code></pre>
+<p>If we rename the “otherdata” frame then the link also has to be generated again:</p>
+<pre><code>frlink 1:1 id, frame(otherdatawithnewname)
+</code></pre>
+<p>The Stata help actually list several scenarios on where and how frame links can be very useful especially when working with complex data construction:</p>
+<pre><code class="language-stata"> help frlink##examples
+</code></pre>
+<p>We can see the link properties as follows:</p>
+<p>frlink describe otherdata</p>
+<p><img src="https://miro.medium.com/max/1400/1*x-3rwDO3x6w553rDOS9BXA.png" alt=""></p>
+<p>And we get this summary on when and how the link was created. What is important is that this command verifies the link and makes sure everything is in order. This is important because we have temporary datasets in frames that might be modified. Just to reiterate, rebuild links if you are not sure.</p>
+<p>We can drop links by simply dropping the variable:</p>
+<pre><code>drop otherdata  
+</code></pre>
+<p>Again, this should be a bit more intuitive or at least have a <code>frlink drop</code> like option. But since these are new features, they are also constantly evolving. What we can definitely do, is generate our own link variable:</p>
+<pre><code>frlink 1:1 id, frame(otherdata) generate(_link_otherdata)
+</code></pre>
+<p>Here I name the variable <code>_link_otherdata</code> which makes it easier to read and identify. But feel free to use an other logical convention. Even if you link the default names intuitive, then that is fine as well.</p>
+<p>While <code>frlink</code> looks similar to the merge command, it has an additional advantage. Frames allow merging on different variable names. In our example above, if we had <code>id</code> as the unique identifier in the main dataset, and, let’s say, <code>carid</code> in “frame1” that we want to merge with, then we can just type: <code>frlink 1:1 id, frame(frame1 carid)</code>. This is powerful option and provides a lot more flexibility. But if you are building a large network of datasets, make sure to track what is linked with what. Ideally, there should be an order to merge variables.</p>
+<p>Another note: frame links are a one-way street. This means that if <em>frame1</em> is linked to <em>frame2</em>, it does not imply that <em>frame2</em> is automatically linked to <em>frame1</em>. This would require different frame link. Additionally all links have to be generated with the main data frame that you are working on. So if we map <em>frame2</em> to <em>frame3</em>, and then <em>frame1</em> to <em>frame2</em>, it does not imply that <em>frame3</em> is automatically linked to <em>frame1</em>. Again this will be useful feature to have but currently frame linking is done directly.</p>
+<h2 id="playing-across-links">Playing across links</h2>
+<p>Now that we have linked the frames, we can also use them interactively to get data and do other calculations. Data from other frames can be extracted using the <code>frget</code> command. It also comes with various options:</p>
+<pre><code class="language-stata">// copy the variables as they are
+frget var1 var2, from(_link_otherdata)
+// copy and prefix the variables
+frget var1 var2, from(_link_otherdata) prefix(copy_)
+// generate a new variable
+frget newvar = var1, from(_link_otherdata)
+</code></pre>
+<p>Note that here we put in the link variable name in the <code>from()</code> option.</p>
+<p>We can also use the data interactively for <em>some (but not all)</em> operations using the <code>frval</code> option:</p>
+<p><code>gen newvar2 = price / frval(_link_otherdata, var1)</code></p>
+<p>We can also use <code>frval</code> in <code>if</code> and <code>in</code> conditions:</p>
+<pre><code class="language-stata">regress price mpg// condition on values in linked frame:
+regress price mpg if frval(_link_otherdata, var1) &lt; 0.5
+</code></pre>
+<p>This can have considerable advantages for controlling data subsets without having to copy everything over.</p>
+<p>The <code>frval</code> cannot be used directly inside regressions for example we cannot say <code>regress price frval(_link_otherdata, var1)</code>. Here one would need to copy the variable first before using it in regressions.</p>
+<p>Are frames always useful? The short answer is not always. If you have 1:1 datasets, better merge them if you are not changing the raw data. You don’t have to force frames in to your data structure. Plus frames in Stata are not the equivalent of frames in R. Since they have existed longer in R, the features are also way more advanced and are central to programming in R. As a result they can do a lot more as well.</p>
+<p>Few articles exist on Stata frames. So I would first of all recommend the introduction to frames in Stata help:</p>
+<p><code>help frames intro</code></p>
+<p>Then read “Fun with frames” on the official Stata blog:</p>
+<p>and another article (with the same name!):</p>
+<p>See this Twitter thread by <a href="https://twitter.com/JanKabatek">Jan Kabatek</a>, who works on very large administrative datasets:</p>
+<p>Jan, also shows how using frames can also provide massive speed gains when generation graphs on his <a href="https://github.com/jankabatek/statapack">GitHub page</a>.</p>
+<p>Another Jan, <a href="https://twitter.com/janditzen">Jan Ditzen</a>, has released frame-based commands to parallelize Monte Carlo simulations in Stata. You can see the thread on <a href="https://www.statalist.org/forums/forum/general-stata-discussion/general/1521018-new-package-simulate2-and-psimulate2">Statalist here</a>. Also check his <a href="https://sites.google.com/site/jandger87/stata-code">GitHub page</a> for various Stata commands that deal with multi-processing.</p>
+<p>And that’s it for this guide! I am still getting used to thinking and working in frames and trying to incorporate it more and more in my work. For older projects where I do use datasets with multiple levels (<em>students, teachers, schools, districts</em> or <em>person, trip, legs, transport mode)</em>, it requires significant code restructuring, and back compatibility is always an issue, but the memory gains are very significant. The frame feature is also currently under constant development and every new Stata patch releases some new features.</p>
+
+
+
+  <footer>
+  
+  
+
+
+
+<script src="//cdnjs.cloudflare.com/ajax/libs/highlight.js/9.12.0/highlight.min.js"></script>
+
+
+
+<script src="//cdnjs.cloudflare.com/ajax/libs/highlight.js/9.12.0/languages/r.min.js"></script>
+<script src="//cdnjs.cloudflare.com/ajax/libs/highlight.js/9.12.0/languages/yaml.min.js"></script>
+<script src="//cdnjs.cloudflare.com/ajax/libs/highlight.js/9.12.0/languages/tex.min.js"></script>
+<script>hljs.configure({languages: []}); hljs.initHighlightingOnLoad();</script>
+
+
+
+  
+  <hr>
+  <div class="copyright">© <a href="https://zxscloud.github.io">晓时</a> 2022 - 2022</div>
+  
+  </footer>
+  </article>
+  
+  </body>
+</html>
+
